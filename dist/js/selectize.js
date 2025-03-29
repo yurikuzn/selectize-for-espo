@@ -759,6 +759,7 @@
 				self.ignoreHover = false;
 			});
 	
+	
 			// store original children and tab index so that they can be
 			// restored when the destroy() method is called.
 			this.revertSettings = {
@@ -766,44 +767,60 @@
 				tabindex  : $input.attr('tabindex')
 			};
 	
-			$input.attr('tabindex', -1).hide().after(self.$wrapper);
 	
-			if (Array.isArray(settings.items)) {
-				self.lastValidValue = settings.items;
-				self.setValue(settings.items);
-				delete settings.items;
-			}
+			// Espo
+			$input.attr('tabindex', -1).hide();//.after(self.$wrapper);
 	
-			// feature detect for the validation API
-			if (SUPPORTS_VALIDITY_API) {
-				$input.on('invalid' + eventNS, function(e) {
-					e.preventDefault();
-					self.isInvalid = true;
-					self.refreshState();
-				});
-			}
+	        const wrapperElement = self.$wrapper.get(0);
+	        const inputElement = $input.get(0);
 	
-			self.updateOriginalInput();
-			self.refreshItems();
-			self.refreshState();
-			self.updatePlaceholder();
-			self.isSetup = true;
+	        const process = () => {
+	            inputElement.after(wrapperElement);
 	
-			if ($input.is(':disabled')) {
-				self.disable();
-			}
+	            if (Array.isArray(settings.items)) {
+	                self.lastValidValue = settings.items;
+	                self.setValue(settings.items);
+	                delete settings.items;
+	            }
 	
-			self.on('change', this.onChange);
+	            // feature detect for the validation API
+	            if (SUPPORTS_VALIDITY_API) {
+	                $input.on('invalid' + eventNS, function(e) {
+	                    e.preventDefault();
+	                    self.isInvalid = true;
+	                    self.refreshState();
+	                });
+	            }
 	
-			$input.data('selectize', self);
-			$input.addClass('selectized');
-			self.trigger('initialize');
+	            self.updateOriginalInput();
+	            self.refreshItems();
+	            self.refreshState();
+	            self.updatePlaceholder();
+	            self.isSetup = true;
 	
-			// preload options
-			if (settings.preload === true) {
-				self.onSearchChange('');
-			}
+	            if ($input.is(':disabled')) {
+	                self.disable();
+	            }
 	
+	            self.on('change', this.onChange);
+	
+	            $input.data('selectize', self);
+	            $input.addClass('selectized');
+	            self.trigger('initialize');
+	
+	            // preload options
+	            if (settings.preload === true) {
+	                self.onSearchChange('');
+	            }
+	        }
+	
+	        if (settings.requestAnimationFrame) {
+	            requestAnimationFrame(() => process());
+	
+	            return;
+	        }
+	
+	        process();
 		},
 	
 		/**
@@ -3077,487 +3094,6 @@
 	$.fn.selectize.support = {
 		validity: SUPPORTS_VALIDITY_API
 	};
-	
-	
-	Selectize.define("auto_position", function () {
-	  var self = this;
-	
-	  const POSITION = {
-	    top: 'top',
-	    bottom: 'bottom',
-	  };
-	
-	  self.positionDropdown = (function() {
-	    return function() {
-	      const $control = this.$control;
-	      const offset = this.settings.dropdownParent === 'body' ? $control.offset() : $control.position();
-	      offset.top += $control.outerHeight(true);
-	
-	      const dropdownHeight = this.$dropdown.prop('scrollHeight') + 5; // 5 - padding value;
-	      const controlPosTop = this.$control.get(0).getBoundingClientRect().top;
-	      const wrapperHeight = this.$wrapper.height();
-	      const position = controlPosTop + dropdownHeight + wrapperHeight  > window.innerHeight ? POSITION.top : POSITION.bottom;
-	      const styles = {
-	        width: $control.outerWidth(),
-	        left: offset.left
-	      };
-	
-	      if (position === POSITION.top) {
-	        Object.assign(styles, {bottom: offset.top, top: 'unset', margin: '0 0 5px 0'});
-	        this.$dropdown.addClass('selectize-position-top');
-	      } else {
-	        Object.assign(styles, {top: offset.top, bottom: 'unset', margin: '5px 0 0 0'});
-	        this.$dropdown.removeClass('selectize-position-top');
-	      }
-	
-	      this.$dropdown.css(styles);
-	    }
-	  }());
-	});
-	
-	
-	Selectize.define('auto_select_on_type', function(options) {
-		var self = this;
-	
-		self.onBlur = (function() {
-			var originalBlur = self.onBlur;
-			return function(e) {
-				var $matchedItem = self.getFirstItemMatchedByTextContent(self.lastValue, true);
-				if (typeof $matchedItem.attr('data-value') !== 'undefined' && self.getValue() !== $matchedItem.attr('data-value'))
-				{
-					self.setValue($matchedItem.attr('data-value'));
-				}
-				return originalBlur.apply(this, arguments);
-			}
-		}());
-	});
-	
-	
-	Selectize.define("autofill_disable", function (options) {
-	  var self = this;
-	
-	  self.setup = (function () {
-	    var original = self.setup;
-	    return function () {
-	      original.apply(self, arguments);
-	
-	      // https://stackoverflow.com/questions/30053167/autocomplete-off-vs-false
-	      self.$control_input.attr({ autocomplete: "new-password", autofill: "no" });
-	    };
-	  })();
-	});
-	
-	
-	Selectize.define('drag_drop', function(options) {
-		if (!$.fn.sortable) throw new Error('The "drag_drop" plugin requires jQuery UI "sortable".');
-		if (this.settings.mode !== 'multi') return;
-		var self = this;
-	
-		self.lock = (function() {
-			var original = self.lock;
-			return function() {
-				var sortable = self.$control.data('sortable');
-				if (sortable) sortable.disable();
-				return original.apply(self, arguments);
-			};
-		})();
-	
-		self.unlock = (function() {
-			var original = self.unlock;
-			return function() {
-				var sortable = self.$control.data('sortable');
-				if (sortable) sortable.enable();
-				return original.apply(self, arguments);
-			};
-		})();
-	
-		self.setup = (function() {
-			var original = self.setup;
-			return function() {
-				original.apply(this, arguments);
-	
-				var $control = self.$control.sortable({
-					items: '[data-value]',
-					forcePlaceholderSize: true,
-					disabled: self.isLocked,
-					start: function(e, ui) {
-						ui.placeholder.css('width', ui.helper.css('width'));
-						// $control.css({overflow: 'visible'});
-						$control.addClass('dragging');
-					},
-					stop: function() {
-						// $control.css({overflow: 'hidden'});
-						$control.removeClass('dragging');
-						var active = self.$activeItems ? self.$activeItems.slice() : null;
-						var values = [];
-						$control.children('[data-value]').each(function() {
-							values.push($(this).attr('data-value'));
-						});
-						self.isFocused = false;
-						self.setValue(values);
-						self.isFocused = true;
-						self.setActiveItem(active);
-						self.positionDropdown();
-					}
-				});
-			};
-		})();
-	
-	});
-	
-	
-	Selectize.define('dropdown_header', function(options) {
-		var self = this;
-	
-		options = $.extend({
-			title         : 'Untitled',
-			headerClass   : 'selectize-dropdown-header',
-			titleRowClass : 'selectize-dropdown-header-title',
-			labelClass    : 'selectize-dropdown-header-label',
-			closeClass    : 'selectize-dropdown-header-close',
-	
-			html: function(data) {
-				return (
-					'<div class="' + data.headerClass + '">' +
-						'<div class="' + data.titleRowClass + '">' +
-							'<span class="' + data.labelClass + '">' + data.title + '</span>' +
-							'<a href="javascript:void(0)" class="' + data.closeClass + '">&#xd7;</a>' +
-						'</div>' +
-					'</div>'
-				);
-			}
-		}, options);
-	
-		self.setup = (function() {
-			var original = self.setup;
-			return function() {
-				original.apply(self, arguments);
-				self.$dropdown_header = $(options.html(options));
-				self.$dropdown.prepend(self.$dropdown_header);
-			};
-		})();
-	
-	});
-	
-	
-	Selectize.define('optgroup_columns', function(options) {
-		var self = this;
-	
-		options = $.extend({
-			equalizeWidth  : true,
-			equalizeHeight : true
-		}, options);
-	
-		this.getAdjacentOption = function($option, direction) {
-			var $options = $option.closest('[data-group]').find('[data-selectable]');
-			var index    = $options.index($option) + direction;
-	
-			return index >= 0 && index < $options.length ? $options.eq(index) : $();
-		};
-	
-		this.onKeyDown = (function() {
-			var original = self.onKeyDown;
-			return function(e) {
-				var index, $option, $options, $optgroup;
-	
-				if (this.isOpen && (e.keyCode === KEY_LEFT || e.keyCode === KEY_RIGHT)) {
-					self.ignoreHover = true;
-					$optgroup = this.$activeOption.closest('[data-group]');
-					index = $optgroup.find('[data-selectable]').index(this.$activeOption);
-	
-					if(e.keyCode === KEY_LEFT) {
-						$optgroup = $optgroup.prev('[data-group]');
-					} else {
-						$optgroup = $optgroup.next('[data-group]');
-					}
-	
-					$options = $optgroup.find('[data-selectable]');
-					$option  = $options.eq(Math.min($options.length - 1, index));
-					if ($option.length) {
-						this.setActiveOption($option);
-					}
-					return;
-				}
-	
-				return original.apply(this, arguments);
-			};
-		})();
-	
-		var getScrollbarWidth = function() {
-			var div;
-			var width = getScrollbarWidth.width;
-			var doc = document;
-	
-			if (typeof width === 'undefined') {
-				div = doc.createElement('div');
-				div.innerHTML = '<div style="width:50px;height:50px;position:absolute;left:-50px;top:-50px;overflow:auto;"><div style="width:1px;height:100px;"></div></div>';
-				div = div.firstChild;
-				doc.body.appendChild(div);
-				width = getScrollbarWidth.width = div.offsetWidth - div.clientWidth;
-				doc.body.removeChild(div);
-			}
-			return width;
-		};
-	
-		var equalizeSizes = function() {
-			var i, n, height_max, width, width_last, width_parent, $optgroups;
-	
-			$optgroups = $('[data-group]', self.$dropdown_content);
-			n = $optgroups.length;
-			if (!n || !self.$dropdown_content.width()) return;
-	
-			if (options.equalizeHeight) {
-				height_max = 0;
-				for (i = 0; i < n; i++) {
-					height_max = Math.max(height_max, $optgroups.eq(i).height());
-				}
-				$optgroups.css({height: height_max});
-			}
-	
-			if (options.equalizeWidth) {
-				width_parent = self.$dropdown_content.innerWidth() - getScrollbarWidth();
-				width = Math.round(width_parent / n);
-				$optgroups.css({width: width});
-				if (n > 1) {
-					width_last = width_parent - width * (n - 1);
-					$optgroups.eq(n - 1).css({width: width_last});
-				}
-			}
-		};
-	
-		if (options.equalizeHeight || options.equalizeWidth) {
-			hook.after(this, 'positionDropdown', equalizeSizes);
-			hook.after(this, 'refreshOptions', equalizeSizes);
-		}
-	
-	
-	});
-	
-	
-	Selectize.define('remove_button', function(options) {
-		options = $.extend({
-				label     : '&#xd7;',
-				title     : 'Remove',
-				className : 'remove',
-				append    : true
-			}, options);
-	
-			var singleClose = function(thisRef, options) {
-	
-				options.className = 'remove-single';
-	
-				var self = thisRef;
-				var html = '<a href="javascript:void(0)" class="' + options.className + '" tabindex="-1" title="' + escape_html(options.title) + '">' + options.label + '</a>';
-	
-				/**
-				 * Appends an element as a child (with raw HTML).
-				 *
-				 * @param {string} html_container
-				 * @param {string} html_element
-				 * @return {string}
-				 */
-				var append = function(html_container, html_element) {
-					return $('<span>').append(html_container)
-						.append(html_element);
-				};
-	
-				thisRef.setup = (function() {
-					var original = self.setup;
-					return function() {
-						// override the item rendering method to add the button to each
-						if (options.append) {
-							var id = $(self.$input.context).attr('id');
-							var selectizer = $('#'+id);
-	
-							var render_item = self.settings.render.item;
-							self.settings.render.item = function(data) {
-								return append(render_item.apply(thisRef, arguments), html);
-							};
-						}
-	
-						original.apply(thisRef, arguments);
-	
-						// add event listener
-						thisRef.$control.on('click', '.' + options.className, function(e) {
-							e.preventDefault();
-							if (self.isLocked) return;
-	
-							self.clear();
-						});
-	
-					};
-				})();
-			};
-	
-			var multiClose = function(thisRef, options) {
-	
-				var self = thisRef;
-				var html = '<a href="javascript:void(0)" class="' + options.className + '" tabindex="-1" title="' + escape_html(options.title) + '">' + options.label + '</a>';
-	
-				/**
-				 * Appends an element as a child (with raw HTML).
-				 *
-				 * @param {string} html_container
-				 * @param {string} html_element
-				 * @return {string}
-				 */
-				var append = function(html_container, html_element) {
-					var pos = html_container.search(/(<\/[^>]+>\s*)$/);
-					return html_container.substring(0, pos) + html_element + html_container.substring(pos);
-				};
-	
-				thisRef.setup = (function() {
-					var original = self.setup;
-					return function() {
-						// override the item rendering method to add the button to each
-						if (options.append) {
-							var render_item = self.settings.render.item;
-							self.settings.render.item = function(data) {
-								return append(render_item.apply(thisRef, arguments), html);
-							};
-						}
-	
-						original.apply(thisRef, arguments);
-	
-						// add event listener
-						thisRef.$control.on('click', '.' + options.className, function(e) {
-							e.preventDefault();
-							if (self.isLocked) return;
-	
-							var $item = $(e.currentTarget).parent();
-							self.setActiveItem($item);
-							if (self.deleteSelection()) {
-								self.setCaret(self.items.length);
-							}
-							return false;
-						});
-	
-					};
-				})();
-			};
-	
-			if (this.settings.mode === 'single') {
-				singleClose(this, options);
-				return;
-			} else {
-				multiClose(this, options);
-			}
-	});
-	
-	
-	Selectize.define('restore_on_backspace', function(options) {
-		var self = this;
-	
-		options.text = options.text || function(option) {
-			return option[this.settings.labelField];
-		};
-	
-		this.onKeyDown = (function() {
-			var original = self.onKeyDown;
-			return function(e) {
-				var index, option;
-				if (e.keyCode === KEY_BACKSPACE && this.$control_input.val() === '' && !this.$activeItems.length) {
-					index = this.caretPos - 1;
-					if (index >= 0 && index < this.items.length) {
-						option = this.options[this.items[index]];
-						if (this.deleteSelection(e)) {
-							this.setTextboxValue(options.text.apply(this, [option]));
-							this.refreshOptions(true);
-						}
-						e.preventDefault();
-						return;
-					}
-				}
-				return original.apply(this, arguments);
-			};
-		})();
-	});
-	
-	
-	Selectize.define('select_on_focus', function(options) {
-		var self = this;
-	
-		self.on('focus', function() {
-			var originalFocus = self.onFocus;
-			return function(e) {
-				var value = self.getItem(self.getValue()).text();
-				self.clear();
-				self.setTextboxValue(value);
-				self.$control_input.select();
-				setTimeout( function () {
-					if (self.settings.selectOnTab) {
-						self.setActiveOption(self.getFirstItemMatchedByTextContent(value));
-					}
-					self.settings.score = null;
-				},0);
-				return originalFocus.apply(this, arguments);
-			};
-		}());
-	
-		self.onBlur = (function() {
-			var originalBlur = self.onBlur;
-			return function(e) {
-				if (self.getValue() === "" && self.lastValidValue !== self.getValue()) {
-					self.setValue(self.lastValidValue);
-				}
-				setTimeout( function () {
-					self.settings.score = function() {
-						return function() {
-							return 1;
-						};
-					};
-				}, 0 );
-				return originalBlur.apply(this, arguments);
-			}
-		}());
-		self.settings.score = function() {
-			return function() { return 1; };
-		};
-	
-	});
-	
-	
-	Selectize.define('tag_limit', function (options) {
-	    const self = this
-	    options.tagLimit = options.tagLimit
-	    this.onBlur = (function (e) {
-	        const original = self.onBlur
-	
-	        return function (e) {
-	            original.apply(this, e);
-	            if (!e)
-	                return
-	            const $control = this.$control
-	            const $items = $control.find('.item')
-	            const limit = options.tagLimit
-	            if (limit === undefined || $items.length <= limit)
-	                return
-	
-	            $items.toArray().forEach(function(item, index) {
-	                if (index < limit)
-	                    return
-	                $(item).hide()
-	            });
-	
-	            $control.append('<span><b>' + ($items.length - limit) + '</b></span>')
-	        };
-	    })()
-	
-	    this.onFocus = (function (e) {
-	        const original = self.onFocus
-	
-	        return function (e) {
-	            original.apply(this, e);
-	            if (!e)
-	                return
-	            const $control = this.$control
-	            const $items = $control.find('.item')
-	            $items.show()
-	            $control.find('span').remove()
-	
-	        };
-	    })()
-	});
 	
 
 	return Selectize;
