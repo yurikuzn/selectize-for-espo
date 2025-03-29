@@ -246,6 +246,7 @@ $.extend(Selectize.prototype, {
 			self.ignoreHover = false;
 		});
 
+
 		// store original children and tab index so that they can be
 		// restored when the destroy() method is called.
 		this.revertSettings = {
@@ -253,44 +254,60 @@ $.extend(Selectize.prototype, {
 			tabindex  : $input.attr('tabindex')
 		};
 
-		$input.attr('tabindex', -1).hide().after(self.$wrapper);
 
-		if (Array.isArray(settings.items)) {
-			self.lastValidValue = settings.items;
-			self.setValue(settings.items);
-			delete settings.items;
-		}
+		// Espo
+		$input.attr('tabindex', -1).hide();//.after(self.$wrapper);
 
-		// feature detect for the validation API
-		if (SUPPORTS_VALIDITY_API) {
-			$input.on('invalid' + eventNS, function(e) {
-				e.preventDefault();
-				self.isInvalid = true;
-				self.refreshState();
-			});
-		}
+        const wrapperElement = self.$wrapper.get(0);
+        const inputElement = $input.get(0);
 
-		self.updateOriginalInput();
-		self.refreshItems();
-		self.refreshState();
-		self.updatePlaceholder();
-		self.isSetup = true;
+        const process = () => {
+            inputElement.after(wrapperElement);
 
-		if ($input.is(':disabled')) {
-			self.disable();
-		}
+            if (Array.isArray(settings.items)) {
+                self.lastValidValue = settings.items;
+                self.setValue(settings.items);
+                delete settings.items;
+            }
 
-		self.on('change', this.onChange);
+            // feature detect for the validation API
+            if (SUPPORTS_VALIDITY_API) {
+                $input.on('invalid' + eventNS, function(e) {
+                    e.preventDefault();
+                    self.isInvalid = true;
+                    self.refreshState();
+                });
+            }
 
-		$input.data('selectize', self);
-		$input.addClass('selectized');
-		self.trigger('initialize');
+            self.updateOriginalInput();
+            self.refreshItems();
+            self.refreshState();
+            self.updatePlaceholder();
+            self.isSetup = true;
 
-		// preload options
-		if (settings.preload === true) {
-			self.onSearchChange('');
-		}
+            if ($input.is(':disabled')) {
+                self.disable();
+            }
 
+            self.on('change', this.onChange);
+
+            $input.data('selectize', self);
+            $input.addClass('selectized');
+            self.trigger('initialize');
+
+            // preload options
+            if (settings.preload === true) {
+                self.onSearchChange('');
+            }
+        }
+
+        if (settings.requestAnimationFrame) {
+            requestAnimationFrame(() => process());
+
+            return;
+        }
+
+        process();
 	},
 
 	/**
