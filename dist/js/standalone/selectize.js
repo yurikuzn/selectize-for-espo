@@ -635,7 +635,7 @@
 }));
 
 /**
- * selectize.js (v0.13.6)
+ * selectize.js (v0.1.0)
  * Copyright (c) 2013–2015 Brian Reavis & contributors
  * Copyright (c) 2020-2022 Selectize Team & contributors
  *
