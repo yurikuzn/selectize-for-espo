@@ -108,7 +108,7 @@ module.exports = function (grunt) {
 
   // enumerate plugins
   (function () {
-    var selector_plugins = grunt.option("plugins");
+    var selector_plugins = grunt.option("plugins") || '*';
     if (!selector_plugins) return;
 
     if (selector_plugins.indexOf(",") !== -1) {
